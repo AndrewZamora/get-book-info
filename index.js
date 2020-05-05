@@ -1,6 +1,7 @@
 const { googleBooksApiKey } = require('./vars.json');
 const axios = require('axios');
 const fs = require('fs');
+const { parse } = require('papaparse');
 
 const readFile = (...args) => {
     return new Promise((resolve, reject) => {
@@ -30,7 +31,26 @@ const appendFile = (...args) => {
 }
 
 (async () => {
-    const bookData = await readFile('./books.csv', 'utf8').catch(error => console.log(error));
-    const bookInfo = await getBookInfo("The Kill A Mocking Bird");
-    console.log(bookInfo.items[8].saleInfo);
+    const rawBookData = await readFile('./books.tsv', 'utf8').catch(error => console.log(error));
+    const books = rawBookData.split('\n').splice(1, rawBookData.length - 1).map(item => {
+        const row = item.split('\t');
+        return {
+            description: row[2],
+            title: row[3],
+            author: row[4]
+        };
+    });
+    const promises = [books[2]].map(async (book) => {
+        const info = await getBookInfo(book.title);
+        const saleInfo = info.items.find(item => {
+            return item.saleInfo.saleability === 'FOR_SALE';
+        });
+        return {
+            ...book,
+            price: saleInfo.saleInfo.listPrice.amount,
+            url: saleInfo.saleInfo.buyLink
+        }
+    });
+    const results = await Promise.all(promises);
+    console.log(results)
 })();
