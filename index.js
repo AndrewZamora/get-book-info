@@ -1,7 +1,6 @@
 const { googleBooksApiKey } = require('./vars.json');
 const axios = require('axios');
 const fs = require('fs');
-const { parse } = require('papaparse');
 
 const readFile = (...args) => {
     return new Promise((resolve, reject) => {
@@ -33,24 +32,34 @@ const appendFile = (...args) => {
 (async () => {
     const rawBookData = await readFile('./books.tsv', 'utf8').catch(error => console.log(error));
     const books = rawBookData.split('\n').splice(1, rawBookData.length - 1).map(item => {
-        const row = item.split('\t');
+        const row = item.replace(/,/g, '').split('\t');
         return {
             description: row[2],
             title: row[3],
             author: row[4]
         };
     });
-    const promises = [books[2]].map(async (book) => {
-        const info = await getBookInfo(book.title);
+    const promises = books.map(async (book, index) => {
+        const info = await getBookInfo(book.title).catch(err => console.log(err));
         const saleInfo = info.items.find(item => {
-            return item.saleInfo.saleability === 'FOR_SALE';
+            if (item.saleInfo) {
+                return item.saleInfo.saleability === 'FOR_SALE';
+            }
         });
         return {
             ...book,
-            price: saleInfo.saleInfo.listPrice.amount,
-            url: saleInfo.saleInfo.buyLink
+            price: saleInfo ? saleInfo.saleInfo.listPrice.amount : "unknown",
+            url: saleInfo ? saleInfo.saleInfo.buyLink : "unknown"
         }
     });
     const results = await Promise.all(promises);
-    console.log(results)
+    for (let i = 0; i < results.length; i++) {
+        if (i === 0) {
+            const firstRow = 'Title,Author,Price,Url,Description'
+            await appendFile('test.csv', firstRow, 'utf8').catch(err => console.log(err));
+        }
+        const { title, author, price, url, description } = results[i];
+        const csvString = `\n${title}, ${author}, ${price}, ${url}, ${description} `
+        await appendFile('test.csv', csvString, 'utf8').catch(err => console.log(err));
+    }
 })();
