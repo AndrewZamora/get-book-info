@@ -2,11 +2,19 @@ const { googleBooksApiKey } = require('./vars.json');
 const axios = require('axios');
 const fs = require('fs');
 
+const exists = (...args) => {
+    return new Promise((resolve, reject) => {
+        fs.exists(...args, (data) => {
+            resolve(data);
+        });
+    });
+}
+
 const readFile = (...args) => {
     return new Promise((resolve, reject) => {
-        fs.readFile(...args, (err, data) => {
-            if (err) {
-                return reject(err);
+        fs.readFile(...args, (error, data) => {
+            if (error) {
+                return reject(error);
             }
             resolve(data);
         });
@@ -20,9 +28,9 @@ const getBookInfo = async (title) => {
 
 const appendFile = (...args) => {
     return new Promise((resolve, reject) => {
-        fs.appendFile(...args, (err) => {
-            if (err) {
-                return reject(err);
+        fs.appendFile(...args, (error) => {
+            if (error) {
+                return reject(error);
             }
             resolve();
         })
@@ -30,8 +38,11 @@ const appendFile = (...args) => {
 }
 
 (async () => {
-    const rawBookData = await readFile('./books.tsv', 'utf8').catch(error => console.log(error));
-    const books = rawBookData.split('\n').splice(1, rawBookData.length - 1).map(item => {
+    const resultsFileExists = await exists('results.csv');
+    const limit = 990;
+    let offset = null;
+    const rawBookData = await readFile('books.tsv', 'utf8').catch(error => console.log(error));
+    let books = rawBookData.split('\n').splice(1, rawBookData.length - 1).map(item => {
         const row = item.replace(/,|"|'/g, '').split('\t');
         return {
             description: row[2],
@@ -39,6 +50,21 @@ const appendFile = (...args) => {
             author: row[4]
         };
     });
+    if (resultsFileExists) {
+        const rawResults = await readFile('results.csv', 'utf8').catch(error => console.log(error));
+        const results = rawResults.split('\n').map(result => result);
+        if(results.length === books.length + 1){
+            console.log("FINISHED!");
+            return
+        }
+        offset = results.length - 1;
+    }
+    if (offset) {
+        books = books.slice(offset);
+    }
+    if(books.length > limit) {
+        books = books.slice(0, limit);
+    }
     const promises = books.map(async (book, index) => {
         const info = await getBookInfo(book.title).catch(err => console.log(err));
         const saleInfo = info.items.find(item => {
@@ -54,12 +80,13 @@ const appendFile = (...args) => {
     });
     const results = await Promise.all(promises);
     for (let i = 0; i < results.length; i++) {
-        if (i === 0) {
+        if (offset === null) {
             const firstRow = 'Title,Author,Price,Url,Description'
-            await appendFile('test.csv', firstRow, 'utf8').catch(err => console.log(err));
+            await appendFile('results.csv', firstRow, 'utf8').catch(err => console.log(err));
         }
         const { title, author, price, url, description } = results[i];
         const csvString = `\n${title}, ${author}, ${price}, ${url}, ${description} `
-        await appendFile('test.csv', csvString, 'utf8').catch(err => console.log(err));
+        await appendFile('results.csv', csvString, 'utf8').catch(err => console.log(err));
     }
+    console.log(`This round is finished.`);
 })();
