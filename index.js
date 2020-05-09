@@ -32,7 +32,7 @@ const appendFile = (...args) => {
 (async () => {
     const rawBookData = await readFile('./books.tsv', 'utf8').catch(error => console.log(error));
     const books = rawBookData.split('\n').splice(1, rawBookData.length - 1).map(item => {
-        const row = item.replace(/,/g, '').split('\t');
+        const row = item.replace(/,|"|'/g, '').split('\t');
         return {
             description: row[2],
             title: row[3],
