@@ -21,8 +21,8 @@ const readFile = (...args) => {
     });
 }
 
-const getBookInfo = async (title) => {
-    const { data } = await axios.get(`https://www.googleapis.com/books/v1/volumes?q=${title}`).catch(error => console.log(error));
+const getBookInfo = async (title, countryCode)=> {
+    const { data } = await axios.get(`https://www.googleapis.com/books/v1/volumes?q=${title}&country=${countryCode}`).catch(error => console.log(error));
     return data;
 }
 
@@ -65,8 +65,8 @@ const appendFile = (...args) => {
     if(books.length > limit) {
         books = books.slice(0, limit);
     }
-    const promises = books.map(async (book, index) => {
-        const info = await getBookInfo(book.title).catch(err => console.log(err));
+    const promises = books.map(async book => {
+        const info = await getBookInfo(book.title, 'US').catch(err => console.log(err));
         const saleInfo = info.items.find(item => {
             if (item.saleInfo) {
                 return item.saleInfo.saleability === 'FOR_SALE';
