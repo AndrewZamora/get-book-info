@@ -80,7 +80,7 @@ const appendFile = (...args) => {
     });
     const results = await Promise.all(promises);
     for (let i = 0; i < results.length; i++) {
-        if (offset === null) {
+        if (offset === null && i === 0) {
             const firstRow = 'Title,Author,Price,Url,Description'
             await appendFile('results.csv', firstRow, 'utf8').catch(err => console.log(err));
         }
