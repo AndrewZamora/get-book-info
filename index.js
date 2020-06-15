@@ -39,10 +39,10 @@ const appendFile = (...args) => {
 
 (async () => {
     const resultsFileExists = await exists('results.csv');
-    const limit = 990;
+    const limit = 1000;
     let offset = null;
     const rawBookData = await readFile('books.tsv', 'utf8').catch(error => console.log(error));
-    let books = rawBookData.split('\n').splice(1, rawBookData.length - 1).map(item => {
+    let books = rawBookData.split('\n').map(item => {
         const row = item.replace(/,|"|'/g, '').split('\t');
         return {
             description: row[2],
@@ -66,7 +66,22 @@ const appendFile = (...args) => {
         books = books.slice(0, limit);
     }
     const promises = books.map(async book => {
-        const info = await getBookInfo(book.title, 'US').catch(err => console.log(err));
+        if(book.title === "") {
+            return {
+                ...book,
+                price: "",
+                url: ""
+            }
+        }
+        const title = book.title.replace(/[^a-zA-Z0-9 -]/g,"");
+        const info = await getBookInfo(title, 'US').catch(err => console.log(err));
+        if(info.totalItems === 0) {
+            return {
+                ...book,
+                price: "",
+                url: ""
+            }
+        }
         const saleInfo = info.items.find(item => {
             if (item.saleInfo) {
                 return item.saleInfo.saleability === 'FOR_SALE';
@@ -74,8 +89,8 @@ const appendFile = (...args) => {
         });
         return {
             ...book,
-            price: saleInfo ? saleInfo.saleInfo.listPrice.amount : "unknown",
-            url: saleInfo ? saleInfo.saleInfo.buyLink : "unknown"
+            price: saleInfo ? saleInfo.saleInfo.listPrice.amount : "",
+            url: saleInfo ? saleInfo.saleInfo.buyLink : ""
         }
     });
     const results = await Promise.all(promises);
