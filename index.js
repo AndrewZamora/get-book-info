@@ -22,7 +22,7 @@ const readFile = (...args) => {
 }
 
 const getBookInfo = async (title, countryCode)=> {
-    const { data } = await axios.get(`https://www.googleapis.com/books/v1/volumes?q=${title}&country=${countryCode}`).catch(error => console.log(error));
+    const { data } = await axios.get(`https://www.googleapis.com/books/v1/volumes?q=+intitle:${title}&country=${countryCode}&printType=books`).catch(error => console.log(error));
     return data;
 }
 
@@ -39,7 +39,7 @@ const appendFile = (...args) => {
 
 (async () => {
     const resultsFileExists = await exists('results.csv');
-    const limit = 1000;
+    const limit = 10;
     let offset = null;
     const rawBookData = await readFile('books.tsv', 'utf8').catch(error => console.log(error));
     let books = rawBookData.split('\n').map(item => {
@@ -82,7 +82,21 @@ const appendFile = (...args) => {
                 url: ""
             }
         }
-        const saleInfo = info.items.find(item => {
+        const authorMatch = info.items.filter(item => {
+            if(item.volumeInfo.authors){
+                return item.volumeInfo.authors.map(author => author.toLowerCase()).includes(book.author.toLowerCase())
+            } else {
+                return false
+            }
+        })
+        if(authorMatch.length < 1) {
+            return {
+                ...book,
+                price: "",
+                url: ""
+            }
+        }
+        const saleInfo = authorMatch.find(item => {
             if (item.saleInfo) {
                 return item.saleInfo.saleability === 'FOR_SALE';
             }
