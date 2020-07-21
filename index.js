@@ -1,4 +1,4 @@
-const { googleBooksApiKey } = require('./vars.json');
+// const { googleBooksApiKey } = require('./vars.json');
 const axios = require('axios');
 const fs = require('fs');
 
@@ -39,7 +39,7 @@ const appendFile = (...args) => {
 
 (async () => {
     const resultsFileExists = await exists('results.csv');
-    const limit = 10;
+    const limit = 5;
     let offset = null;
     const rawBookData = await readFile('books.tsv', 'utf8').catch(error => console.log(error));
     let books = rawBookData.split('\n').map(item => {
@@ -96,8 +96,10 @@ const appendFile = (...args) => {
                 url: ""
             }
         }
+        console.log(authorMatch);
         const saleInfo = authorMatch.find(item => {
             if (item.saleInfo) {
+                console.log(item.volumeInfo.industryIdentifiers)
                 return item.saleInfo.saleability === 'FOR_SALE';
             }
         });
@@ -108,14 +110,14 @@ const appendFile = (...args) => {
         }
     });
     const results = await Promise.all(promises);
-    for (let i = 0; i < results.length; i++) {
-        if (offset === null && i === 0) {
-            const firstRow = 'Title,Author,Price,Url,Description'
-            await appendFile('results.csv', firstRow, 'utf8').catch(err => console.log(err));
-        }
-        const { title, author, price, url, description } = results[i];
-        const csvString = `\n${title}, ${author}, ${price}, ${url}, ${description} `
-        await appendFile('results.csv', csvString, 'utf8').catch(err => console.log(err));
-    }
-    console.log(`This round is finished.`);
+    // for (let i = 0; i < results.length; i++) {
+    //     if (offset === null && i === 0) {
+    //         const firstRow = 'Title,Author,Price,Url,Description'
+    //         await appendFile('results.csv', firstRow, 'utf8').catch(err => console.log(err));
+    //     }
+    //     const { title, author, price, url, description } = results[i];
+    //     const csvString = `\n${title}, ${author}, ${price}, ${url}, ${description} `
+    //     await appendFile('results.csv', csvString, 'utf8').catch(err => console.log(err));
+    // }
+    // console.log(`This round is finished.`);
 })();
