@@ -50,22 +50,30 @@ const appendFile = (...args) => {
             author: row[4]
         };
     });
-    if (resultsFileExists) {
-        const rawResults = await readFile('results.csv', 'utf8').catch(error => console.log(error));
-        const results = rawResults.split('\n').map(result => result);
-        if(results.length === books.length + 1){
-            console.log("FINISHED!");
-            return
+    let booksWithOneAuthor = [];
+    for(const book of books) {
+        const author = book.author.split(';');
+        if(author.length === 1 && author[0].length > 2) {
+            booksWithOneAuthor.push(book);
         }
-        offset = results.length - 1;
     }
-    if (offset) {
-        books = books.slice(offset);
-    }
-    if(books.length > limit) {
-        books = books.slice(0, limit);
-    }
-    const promises = books.map(async book => {
+    // console.log(booksWithOneAuthor);
+    // if (resultsFileExists) {
+    //     const rawResults = await readFile('results.csv', 'utf8').catch(error => console.log(error));
+    //     const results = rawResults.split('\n').map(result => result);
+    //     if(results.length === books.length + 1){
+    //         console.log("FINISHED!");
+    //         return
+    //     }
+    //     offset = results.length - 1;
+    // }
+    // if (offset) {
+    //     books = books.slice(offset);
+    // }
+    // if(books.length > limit) {
+    //     books = books.slice(0, limit);
+    // }
+    const promises = booksWithOneAuthor.slice(0,6).map(async book => {
         if(book.title === "") {
             return {
                 ...book,
@@ -84,6 +92,7 @@ const appendFile = (...args) => {
         }
         const authorMatch = info.items.filter(item => {
             if(item.volumeInfo.authors){
+                console.log(item.volumeInfo.authors,book.author.toLowerCase())
                 return item.volumeInfo.authors.map(author => author.toLowerCase()).includes(book.author.toLowerCase())
             } else {
                 return false
@@ -96,7 +105,7 @@ const appendFile = (...args) => {
                 url: ""
             }
         }
-        console.log(authorMatch);
+        console.log("matches",authorMatch);
         const saleInfo = authorMatch.find(item => {
             if (item.saleInfo) {
                 console.log(item.volumeInfo.industryIdentifiers)
@@ -110,6 +119,7 @@ const appendFile = (...args) => {
         }
     });
     const results = await Promise.all(promises);
+    console.log("results",results)
     // for (let i = 0; i < results.length; i++) {
     //     if (offset === null && i === 0) {
     //         const firstRow = 'Title,Author,Price,Url,Description'
